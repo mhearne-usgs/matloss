@@ -3,6 +3,13 @@ matloss
 
 Matlab code for accessing and processing PAGER loss model input data.
 
+Installation:
+Download gitinstall (https://github.com/mhearne-usgs/mgitinstall)
+
+Then:
+
+gitinstall https://github.com/mhearne-usgs/mgitinstall
+
 Functions:
 <pre>
   readimpact - Read impact XML data file.
