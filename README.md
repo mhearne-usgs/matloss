@@ -12,7 +12,7 @@ gitinstall https://github.com/mhearne-usgs/mgitinstall
 
 Functions:
 <pre>
-  readexpocat - Load ExpoCat events from XML file OR structure array.
+readexpocat - Load ExpoCat events from XML file OR structure array.
   allevents = readexpocat(xmlfile,param,value);
   Input:
    - xmlfile Full path to the expocat.xml file OR structure array (see output)
@@ -35,13 +35,16 @@ Functions:
       - ccode Country code where exposure occurred.
       - exposure 10 element array of country population exposure to shaking (MMI I - X)
       - time Event time (duplicated here to make searches efficient).
-    - impacts Structure containing earthquake impact structures:
+    - impacts Structure containing PREFERRED earthquake impact structures:
        -injured
        -buildingsDestroyed
        -missing
        -buildingsDamaged
        -shakingDeaths
        -tsunamiDeaths
+       -landslideDeaths
+       -otherDeaths
+       -undiffDeaths
        -totalDeaths
        -displaced
        -dollars
@@ -59,6 +62,13 @@ Functions:
     Each impact and effect field is also structure containing two fields:
       - source Source for impact/effect data.
       - value Value for impact/effect.
+    There are also four structures containing non-preferred quantities:
+      - originlist A structure array with fields: time,lat,lon,depth,source.
+      - magnitudelist A structure array with fields: mag, magsrc.
+      - impactlist A structure array with impact structures, (see names above), 
+                   each containing fields: impact,value,source
+      - effectlist A structure array with effect structures (see names
+                   above), each containing fields: effect,value, source.
   Usage:
   To read in all events from the expocat.xml file:
   allevents = readexpocat(allevents);

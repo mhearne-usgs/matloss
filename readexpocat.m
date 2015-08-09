@@ -21,13 +21,16 @@
 %     - ccode Country code where exposure occurred.
 %     - exposure 10 element array of country population exposure to shaking (MMI I - X)
 %     - time Event time (duplicated here to make searches efficient).
-%   - impacts Structure containing earthquake impact structures:
+%   - impacts Structure containing PREFERRED earthquake impact structures:
 %      -injured
 %      -buildingsDestroyed
 %      -missing
 %      -buildingsDamaged
 %      -shakingDeaths
 %      -tsunamiDeaths
+%      -landslideDeaths
+%      -otherDeaths
+%      -undiffDeaths
 %      -totalDeaths
 %      -displaced
 %      -dollars
@@ -45,6 +48,13 @@
 %   Each impact and effect field is also structure containing two fields:
 %     - source Source for impact/effect data.
 %     - value Value for impact/effect.
+%   There are also four structures containing non-preferred quantities:
+%     - originlist A structure array with fields: time,lat,lon,depth,source.
+%     - magnitudelist A structure array with fields: mag, magsrc.
+%     - impactlist A structure array with impact structures, (see names above), 
+%                  each containing fields: impact,value,source
+%     - effectlist A structure array with effect structures (see names
+%                  above), each containing fields: effect,value, source.
 % Usage:
 % To read in all events from the expocat.xml file:
 % allevents = readexpocat(allevents);
@@ -112,6 +122,8 @@ function events = readevents(xmlfile)
         event = eventlist.item(i);
         origins = event.getElementsByTagName('origin');
         ccode = char(event.getAttribute('ccode'));
+        originlist = struct('time',nan,'lat',nan,'lon',nan,'depth',nan,'source','');
+        ocount = 0;
         for j=0:origins.getLength-1
             origin = origins.item(j);
             if strcmpi(char(origin.getAttribute('preferred')),'True')
@@ -120,16 +132,31 @@ function events = readevents(xmlfile)
                 lon = str2double(char(origin.getAttribute('lon')));
                 depth = str2double(char(origin.getAttribute('depth')));
                 originsource = char(origin.getAttribute('source'));
-                break;
+            else
+                ostruct = struct();
+                ostruct.time = datenum(char(origin.getAttribute('time')));
+                ostruct.lat = str2double(char(origin.getAttribute('lat')));
+                ostruct.lon = str2double(char(origin.getAttribute('lon')));
+                ostruct.depth = str2double(char(origin.getAttribute('depth')));
+                ostruct.source = char(origin.getAttribute('source'));
+                originlist(ocount+1) = ostruct;
+                ocount = ocount + 1;
             end
         end
         magnitudes = event.getElementsByTagName('magnitude');
+        maglist = struct('mag',nan,'magsrc','');
+        mcount = 0;
         for j=0:magnitudes.getLength-1
             magnitude = magnitudes.item(j);
             if strcmpi(char(magnitude.getAttribute('preferred')),'True')
                 mag = str2double(char(magnitude.getAttribute('value')));
                 magsrc = char(magnitude.getAttribute('source'));
-                break;
+            else
+                mstruct = struct();
+                mstruct.mag = str2double(char(magnitude.getAttribute('value')));
+                mstruct.magsrc = char(magnitude.getAttribute('source'));
+                maglist(mcount+1) = mstruct;
+                mcount = mcount + 1;
             end
         end
         exposures = struct('ccode','','exposure',[],'time',nan);
@@ -154,6 +181,8 @@ function events = readevents(xmlfile)
             'buildingsDamaged', struct('source','','value',nan),...
             'shakingDeaths', struct('source','','value',nan),...
             'tsunamiDeaths', struct('source','','value',nan),...
+            'otherDeaths', struct('source','','value',nan),...
+            'undiffDeaths', struct('source','','value',nan),...
             'totalDeaths', struct('source','','value',nan),...
             'displaced', struct('source','','value',nan),...
             'dollars', struct('source','','value',nan),...
@@ -161,10 +190,17 @@ function events = readevents(xmlfile)
             'tsunamiInjured', struct('source','','value',nan),...
             'tsunamiBuildingsDamaged', struct('source','','value',nan),...
             'buildingsDamagedOrDestroyed', struct('source','','value',nan));
+        otherimpacts = struct('impact','','source','','value','');
+        icount = 0;
         for j=0:impactlist.getLength-1
             impact = impactlist.item(j);
             if ~strcmpi(char(impact.getAttribute('preferred')),'True')
-                continue;
+                istruct = struct();
+                istruct.impact = char(impact.getAttribute('type'));
+                istruct.source = char(impact.getAttribute('source'));
+                istruct.value = str2num(impact.getAttribute('value'));
+                otherimpacts(icount+1) = istruct;
+                icount = icount + 1;
             end
             type = char(impact.getAttribute('type'));
             source = char(impact.getAttribute('source'));
@@ -179,10 +215,17 @@ function events = readevents(xmlfile)
             'tsunami', struct('source','','value',nan),...
             'landslide', struct('source','','value',nan),...
             'casualty',struct('source','','value',nan));
+        othereffects = struct('effect','','source','','value','');
+        ecount = 0;
         for j=0:effectlist.getLength-1
             effect = effectlist.item(j);
             if ~strcmpi(char(effect.getAttribute('preferred')),'True')
-                continue;
+                estruct = struct();
+                estruct.effect = char(effect.getAttribute('type'));
+                estruct.source = char(effect.getAttribute('source'));
+                estruct.value = str2num(effect.getAttribute('value'));
+                othereffects(ecount+1) = estruct;
+                ecount = ecount + 1;
             end
             type = char(effect.getAttribute('type'));
             source = char(effect.getAttribute('source'));
@@ -202,5 +245,25 @@ function events = readevents(xmlfile)
         events(i+1).exposures = exposures;
         events(i+1).impacts = impacts;
         events(i+1).effects = effects;
+        if mcount > 0
+            events(i+1).maglist = maglist;
+        else
+            events(i+1).maglist = struct([]);
+        end
+        if ocount > 0
+            events(i+1).originlist = originlist;
+        else
+            events(i+1).originlist = struct([]);
+        end
+        if icount > 0
+            events(i+1).impactlist = otherimpacts;
+        else
+            events(i+1).impactlist = struct([]);
+        end
+        if ecount > 0
+            events(i+1).effectlist = othereffects;
+        else
+            events(i+1).effectlist = struct([]);
+        end
     end
 end
